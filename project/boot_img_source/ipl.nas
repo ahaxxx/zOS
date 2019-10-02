@@ -26,7 +26,7 @@
 		DB		"FAT12   "		; 硬盘格式
 		RESB	18				; 空出18字符
 
-; プログラム本体
+; 程序主体
 
 entry:
 		MOV		AX,0			; 初始化寄存器
@@ -53,7 +53,7 @@ msg:
 		DB		0x0a, 0x0a		; 换行
 		DB		"zOS is in development."
 		DB		0x0a			; 换行
-		DB		"Last updata is 2019.09.18 19:39"
+		DB		"Last updata is 2019.10.02 19:39"
 		DB		0
 
 		RESB	0x7dfe-$		; 填充0x00直到0x7dfe

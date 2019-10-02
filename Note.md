@@ -62,11 +62,11 @@
  * DD指令
    * 32位占位符
 
-## 汇编语言与makefile
+## 汇编语言
 
 汇编语言版本的zOS引导镜像如下
 ```
-; zOS
+; zOS 
 
 ; TAB=4
 
@@ -92,27 +92,27 @@
 
         DB      0xf0            ; 磁盘种类（必须为0xf0）
 
-        DW      9               ; FAT?度(必须为9)
+        DW      9               ; FAT长度(必须为9)
 
-        DW      18              ; 1个磁道有几个扇区（必须为18）
+        DW      18              ; 1个磁道有几个扇区（18）
 
         DW      2               ; 磁头数（必须为2）
 
-        DD      0               ; 不使用分区（必须为0）
+        DD      0               ; 不使用分区（必为00）
 
-        DD      2880            ; 重写磁盘大小
+        DD      2880            ; 重写磁道大小
 
         DB      0,0,0x29        ; 
 
-        DD      0xffffffff      ; 卷标号
+        DD      0xffffffff      ; 卷号
 
         DB      "zOS-OS     "   ; 磁盘名
 
         DB      "FAT12   "      ; 硬盘格式
 
-        RESB    18              ; 空出18字节
+        RESB    18              ; 空出18字符
 
-; 程序主体
+; 程序本体
 
 entry:
 
@@ -132,7 +132,7 @@ putloop:
 
         MOV     AL,[SI]
 
-        ADD     SI,1            ; 给ST+1
+        ADD     SI,1            ; SI+1
 
         CMP     AL,0
 
@@ -142,39 +142,31 @@ putloop:
 
         MOV     BX,15           ; 字符颜色
 
-        INT     0x10            ; 调用显卡BIOS
+        INT     0x10            ; 调用BIOS命令
 
         JMP     putloop
 
 fin:
 
-        HLT                     ; CPU停止等待指令
+        HLT                     ; 暂停等待输入命令
 
-        JMP     fin             ; 死循环
+        JMP     fin             ; 无限循环
 
 msg:
 
-        DB      0x0a, 0x0a      ; 换行2次
+        DB      0x0a, 0x0a      ; 换行
 
-        DB      "hello, world"
+        DB      "zOS is in development."
 
         DB      0x0a            ; 换行
 
+        DB      "Last updata is 2019.09.18 19:39"
+
         DB      0
 
-        RESB    0x7dfe-$        
+        RESB    0x7dfe-$        ; 填充0x00直到0x7dfe
 
         DB      0x55, 0xaa
-
-; 启动区之外输出
-
-        DB      0xf0, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00
-
-        RESB    4600
-
-        DB      0xf0, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00
-
-        RESB    1469432
 ```
 
  * ORG 
@@ -255,6 +247,31 @@ if(AL == 0){
    `INT` 指令，中断操作的意思，配合BIOS指令集使用，类似于`system(“pause”);`
    `HLT`指令 CPU停止（线程挂起），外部环境没有变化时就会挂起线程，节约系统资源，iOS也是这样设计？
 
-## 引导
+## Makefile
+### 介绍
+make官方的描述如下：
+* make是一个可以从程序源文件控制生成可执行文件或者其他非源文件的工具。
+* make可以从`makefile`文件中获取到文件的生成规则，`makefile`列出了所有的非源程序和如何从其他文件生成非源程序的规则。
+* 当创建一个项目时，应该为它创建一个`makefile`
 
+### makefile规则
 
+Makefile里主要包含了五个东西：显示规则、隐晦规则、变量定义、文件指示和注释。
+
+*   显示规则
+    显示规则说明了如何生成一个或者多个目标文件。这是由Malefile的书写者明显指出，要生成的文件，文件的依赖关系，生成的命令。
+
+*   隐晦规则
+    由于我们的make有自动推导的功能，所以隐晦的规则可以让我们比较粗糙地简略地书写Makefile。
+
+*   变量的定义
+    在Makefile中我们需要定义一系列的变量，变量一般都是字符串，这个有点像c语言里面的宏定义，当Makefile被执行时，其中的变量都会被扩展到相应的引用位置上。
+
+*   文件指示
+    包括了三个部分，一个是在一个Makefile中引用另一个Makefile，就像c语言里面的include一样；另一个是根据某些情况指定Makefile中的有效部分，就像c语言中的#if一样；还有就是定义一个多行的命令。
+
+*   注释
+    Makefile中只有行注释，注释使用`#`。
+
+### 本人的理解
+makefile在这里是将一大串用于生成各种文件的批处理命令整合到了一起，通过make的命令可以很便捷的将这些语句调用，减少开发过程中的繁琐操作。
