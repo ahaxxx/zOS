@@ -5,8 +5,9 @@
 
 
 ; 以下为FAT12引导
+		JMP		entry
 
-		DB		0xeb, 0x4e, 0x90
+		DB		0x90
 		DB		"zOS__IPL"		; 扇区名称(8字符)
 		DW		512				; 扇区大小（512字节）
 		DB		1				; cluster的个数(必须为1)
@@ -33,9 +34,27 @@ entry:
 		MOV		SS,AX
 		MOV		SP,0x7c00
 		MOV		DS,AX
-		MOV		ES,AX
+; 读取磁盘
+		MOV		AX,0x0820
+		MOV		ES,AX			
+		MOV		CH,0			; 柱面0
+		MOV		DH,0			; 磁头2
+		MOV		CL,2			; 扇区2
 
+		MOV		AH,0x02			; AH=0x02 载入磁盘
+		MOV		AL,1			; 1个扇区
+		MOV 	BX,0
+		MOV 	DL,0x00			; A驱动器
+		INT		0x13			; 调用磁盘BIOS
+		JC		error
+
+fin:
+		HLT						; CPU待命
+		JMP		fin				; 无限循环
+
+error:
 		MOV		SI,msg
+
 putloop:
 		MOV		AL,[SI]
 		ADD		SI,1			; SI+1
@@ -45,9 +64,6 @@ putloop:
 		MOV		BX,15			; 字符颜色
 		INT		0x10			; 调用BIOS命令
 		JMP		putloop
-fin:
-		HLT						; 暂停等待输入命令
-		JMP		fin				; 无限循环
 
 msg:
 		DB		0x0a, 0x0a		; 换行
