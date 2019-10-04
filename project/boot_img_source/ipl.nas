@@ -41,12 +41,31 @@ entry:
 		MOV		DH,0			; 磁头2
 		MOV		CL,2			; 扇区2
 
+readloop:						; 读取至18扇区
+		MOV		SI,0			; 此寄存器用于记录失败次数
+
+retry:
 		MOV		AH,0x02			; AH=0x02 载入磁盘
 		MOV		AL,1			; 1个扇区
 		MOV 	BX,0
 		MOV 	DL,0x00			; A驱动器
 		INT		0x13			; 调用磁盘BIOS
-		JC		error
+		JNC		fin				; 如果没有报错就执行fin
+		ADD		SI,1			; 失败次数+1
+		CMP		SI,5			; 判断失败次数是否为5
+		JAE		error			; SI>=5 时报错 JAE的意思是>=
+		MOV		AH,0x00
+		MOV		DL,0x00			; A驱动器
+		INT		0x13			; 驱动器重置
+		JMP		retry
+
+next:
+		MOV		AX,ES			; 内存地址后移0x200
+		ADD		AX,0x0020
+		MOV		ES,AX			
+		ADD		CL,1			; CL用来记录移动的扇区次数
+		CMP		CL,18			; 比较CL和18
+		JBE		readloop		; CL <= 18时继续读盘
 
 fin:
 		HLT						; CPU待命
@@ -69,7 +88,7 @@ msg:
 		DB		0x0a, 0x0a		; 换行
 		DB		"zOS is in development."
 		DB		0x0a			; 换行
-		DB		"Last updata is 2019.10.02 19:39"
+		DB		"Last updata is 2019.10.04 14:52"
 		DB		0
 
 		RESB	0x7dfe-$		; 填充0x00直到0x7dfe
