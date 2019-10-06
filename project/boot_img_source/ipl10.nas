@@ -1,12 +1,13 @@
 ; zOS 
 ; TAB=4
 
+CYLS	EQU		10
+
 		ORG		0x7c00			; 程序加载位置
 
 
 ; 以下为FAT12引导
 		JMP		entry
-
 		DB		0x90
 		DB		"zOS__IPL"		; 扇区名称(8字符)
 		DW		512				; 扇区大小（512字节）
@@ -50,7 +51,7 @@ retry:
 		MOV 	BX,0
 		MOV 	DL,0x00			; A驱动器
 		INT		0x13			; 调用磁盘BIOS
-		JNC		fin				; 如果没有报错就执行fin
+		JNC		next			; 如果没有报错就执行next
 		ADD		SI,1			; 失败次数+1
 		CMP		SI,5			; 判断失败次数是否为5
 		JAE		error			; SI>=5 时报错 JAE的意思是>=
@@ -66,10 +67,17 @@ next:
 		ADD		CL,1			; CL用来记录移动的扇区次数
 		CMP		CL,18			; 比较CL和18
 		JBE		readloop		; CL <= 18时继续读盘
+		MOV		CL,1
+		ADD		DH,1
+		CMP		DH,2
+		JB 		readloop		; DH < 2 跳转readloop
+		MOV		DH,0
+		ADD		CH,1
+		CMP		CH,CYLS
+		JB		readloop		; CH < CYLS 跳转readloop
 
-fin:
-		HLT						; CPU待命
-		JMP		fin				; 无限循环
+		MOV		[0x0ff0],CH		; 读取zOS.sys
+		JMP		0xc200
 
 error:
 		MOV		SI,msg
@@ -83,6 +91,10 @@ putloop:
 		MOV		BX,15			; 字符颜色
 		INT		0x10			; 调用BIOS命令
 		JMP		putloop
+		
+fin:
+		HLT						; CPU待命
+		JMP		fin				; 无限循环
 
 msg:
 		DB		0x0a, 0x0a		; 换行
