@@ -98,7 +98,7 @@ fin:
 
 msg:
 		DB		0x0a, 0x0a		; 换行
-		DB		"zOS is in development."
+		DB		"load error...zOS is in development."
 		DB		0x0a			; 换行
 		DB		"Last updata is 2019.10.04 14:52"
 		DB		0
