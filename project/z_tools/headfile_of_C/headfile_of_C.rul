@@ -1,0 +1,18 @@
+format:
+	/* 在这里记录读取格式 */
+	code(align:1, logic:0x24,      file:0x24);
+	data(align:4, logic:stack_end, file:code_end);
+
+file:
+	/* 在这里记录需要调用的.lib和.obj文件*/
+	/* 这里可以使用绝对路径 */
+	/* 例如：  c:/osask/gg00libc.lib;  */
+	../z_tools/headfile_of_C/zoslibc.lib;
+	../z_tools/headfile_of_C/golibc.lib;
+
+label:
+	/* 指定必须链接的标签 */
+	/* 也就是制定读取入口 */
+	_HariStartup;
+
+	/* 以上顺序不可更换 */

@@ -100,7 +100,7 @@ msg:
 		DB		0x0a, 0x0a		; 换行
 		DB		"load error...zOS is in development."
 		DB		0x0a			; 换行
-		DB		"Last updata is 2019.10.04 14:52"
+		DB		"Last updata is 2019.10.12 14:52"
 		DB		0
 
 		RESB	0x7dfe-$		; 填充0x00直到0x7dfe
