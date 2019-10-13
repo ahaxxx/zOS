@@ -37,9 +37,13 @@ bootsource.nas : bootsource.gas Makefile
 bootsource.obj : bootsource.nas Makefile
 	$(NASK) bootsource.nas bootsource.obj bootsource.lst
 
-bootsource.bim : bootsource.obj Makefile
+
+naskfunc.obj : naskfunc.nas Makefile
+	$(NASK) naskfunc.nas naskfunc.obj naskfunc.lst
+
+bootsource.bim : bootsource.obj naskfunc.obj Makefile
 	$(OBJ2BIM) @$(RULEFILE) out:bootsource.bim stack:3136k map:bootsource.map \
-		bootsource.obj
+		bootsource.obj naskfunc.obj
 # 3MB+64KB=3136KB
 
 bootsource.hrb : bootsource.bim Makefile
@@ -55,9 +59,6 @@ zOS.img : ipl10.bin zOS.sys Makefile
 		imgout:zOS.img
 
 # 命令
-
-asm :
-	$(MAKE) ipl10.bin
 
 img :
 	$(MAKE) zOS.img
