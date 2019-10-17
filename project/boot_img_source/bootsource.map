@@ -1,30 +1,36 @@
-text size :    923(0x0039B)
-data size :     48(0x00030)
+text size :   1230(0x004CE)
+data size :   4144(0x01030)
 bss  size :      0(0x00000)
 
+0x00000000 : (.text)
 0x00000024 : (.text)
 0x00000024 : _HariMain
-0x0000027B : _init_palette
-0x0000028E : _set_palette
-0x00000316 : _boxfill8
-0x00000367 : _io_hlt
-0x00000367 : (.text)
-0x00000369 : _io_cli
-0x0000036B : _io_sti
-0x0000036D : _io_stihlt
-0x00000370 : _io_in8
-0x0000037B : _io_in16
-0x00000387 : _io_in32
-0x0000038D : _io_out8
-0x00000397 : _io_out16
-0x000003A2 : _io_out32
-0x000003AC : _io_load_eflags
-0x000003AF : _io_store_eflags
-0x000003B6 : (.text)
-0x000003B6 : _HariStartup
+0x0000014D : _init_palette
+0x00000160 : _set_palette
+0x000001E8 : _boxfill8
+0x00000239 : _init_screen
+0x00000414 : _putfont8
+0x0000049A : _io_hlt
+0x0000049A : (.text)
+0x0000049C : _io_cli
+0x0000049E : _io_sti
+0x000004A0 : _io_stihlt
+0x000004A3 : _io_in8
+0x000004AE : _io_in16
+0x000004BA : _io_in32
+0x000004C0 : _io_out8
+0x000004CA : _io_out16
+0x000004D5 : _io_out32
+0x000004DF : _io_load_eflags
+0x000004E2 : _io_store_eflags
+0x000004E9 : (.text)
+0x000004E9 : _HariStartup
 0x00000000 : (.data)
 0x00000000 : (.data)
 0x00310000 : (.data)
+0x00310030 : _hankaku
+0x00310030 : (.data)
+0x00000000 : (.bss)
 0x00000000 : (.bss)
 0x00000000 : (.bss)
 0x00000000 : (.bss)

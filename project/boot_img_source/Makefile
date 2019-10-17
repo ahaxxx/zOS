@@ -6,6 +6,8 @@ NASK     = $(TOOLPATH)nask.exe
 CC1      = $(TOOLPATH)cc1.exe -I$(INCPATH) -Os -Wall -quiet
 GAS2NASK = $(TOOLPATH)gas2nask.exe -a
 OBJ2BIM  = $(TOOLPATH)obj2bim.exe
+MAKEFONT = $(TOOLPATH)makefont.exe
+BIN2OBJ  = $(TOOLPATH)bin2obj.exe
 BIM2HRB  = $(TOOLPATH)bim2hrb.exe
 RULEFILE = $(TOOLPATH)headfile_of_C/headfile_of_C.rul
 EDIMG    = $(TOOLPATH)edimg.exe
@@ -37,13 +39,18 @@ bootsource.nas : bootsource.gas Makefile
 bootsource.obj : bootsource.nas Makefile
 	$(NASK) bootsource.nas bootsource.obj bootsource.lst
 
-
 naskfunc.obj : naskfunc.nas Makefile
 	$(NASK) naskfunc.nas naskfunc.obj naskfunc.lst
 
-bootsource.bim : bootsource.obj naskfunc.obj Makefile
+hankaku.bin : hankaku.txt Makefile
+	$(MAKEFONT) hankaku.txt hankaku.bin
+
+hankaku.obj : hankaku.bin Makefile
+	$(BIN2OBJ) hankaku.bin hankaku.obj _hankaku
+
+bootsource.bim : bootsource.obj naskfunc.obj hankaku.obj Makefile
 	$(OBJ2BIM) @$(RULEFILE) out:bootsource.bim stack:3136k map:bootsource.map \
-		bootsource.obj naskfunc.obj
+		bootsource.obj naskfunc.obj hankaku.obj
 # 3MB+64KB=3136KB
 
 bootsource.hrb : bootsource.bim Makefile
