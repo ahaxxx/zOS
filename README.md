@@ -5,7 +5,7 @@ zOS是由个人开发的带有实验性质的操作系统，开发过程中参�
 欢迎各位操作系统爱好者与我交流：liubingxing@nucosc.com
 
 zOS is an experimental operating system developed by a independent developer.
-You can content with me by email:liubingxing@nucosc.com
+You can contact with me by email:liubingxing@nucosc.com
 
 ## zOS开发日志（Development log）
 * 2019.09.18
