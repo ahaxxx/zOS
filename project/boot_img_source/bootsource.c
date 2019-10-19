@@ -1,17 +1,6 @@
-void io_hlt(void);
-void io_cli(void);
-void io_out8(int port, int data);
-int io_load_eflags(void);
-void io_store_eflags(int eflags);
-/*-----以上函数存在于naskfunc.nas中-----*/
+#include<stdio.h>
 
-void init_palette(void);
-void set_palette(int start, int end, unsigned char *rgb);
-void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1);
-void init_screen(char *vram, int x, int y);
-void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
-/*-----以上函数存在于bootsource.c-------*/
-
+/*-----------颜色的声明-----------*/
 #define COL8_000000		0
 #define COL8_FF0000		1
 #define COL8_00FF00		2
@@ -29,6 +18,24 @@ void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
 #define COL8_008484		14
 #define COL8_848484		15
 
+void io_hlt(void);
+void io_cli(void);
+void io_out8(int port, int data);
+int io_load_eflags(void);
+void io_store_eflags(int eflags);
+/*-----以上函数存在于naskfunc.nas中-----*/
+
+void init_palette(void);
+void set_palette(int start, int end, unsigned char *rgb);
+void boxfill8(unsigned char *vram, int xsize, unsigned char c, int x0, int y0, int x1, int y1);
+void init_screen(char *vram, int x, int y);
+void putfont8(char *vram, int xsize, int x, int y, char c, char *font);
+void putfonts(char *vram, int xsize, int x, int y, char c, unsigned char *s);
+void init_mouse_cursor8(char *mouse, char bc);
+/*-----以上函数存在于bootsource.c-------*/
+
+
+
 struct Bootinfo {
 	//引导信息
 	char cyls, leds, vmode, reserve;
@@ -39,22 +46,24 @@ struct Bootinfo {
 void HariMain(void)
 {	
 	struct Bootinfo *bootinfo;
-	extern char hankaku[4096];
+	char s1[40],s2[40],mouse[256];
+	int cx,cy;
 
 	init_palette();
-
 	bootinfo = (struct Bootinfo *) 0x0ff0;
-
 	init_screen(bootinfo->vram, bootinfo->scrnx, bootinfo->scrny);
+	
+	cx = (bootinfo->scrnx - 16) / 2;
+	cy = (bootinfo->scrny - 28 - 16) / 2;
 
-	putfont8(bootinfo->vram, bootinfo->scrnx,  8, 8, COL8_FFFFFF, hankaku + 'H' * 16);
-	putfont8(bootinfo->vram, bootinfo->scrnx, 16, 8, COL8_FFFFFF, hankaku + 'E' * 16);
-	putfont8(bootinfo->vram, bootinfo->scrnx, 24, 8, COL8_FFFFFF, hankaku + 'L' * 16);
-	putfont8(bootinfo->vram, bootinfo->scrnx, 32, 8, COL8_FFFFFF, hankaku + 'L' * 16);
-	putfont8(bootinfo->vram, bootinfo->scrnx, 40, 8, COL8_FFFFFF, hankaku + 'O' * 16);
-	putfont8(bootinfo->vram, bootinfo->scrnx, 56, 8, COL8_FFFFFF, hankaku + 'z' * 16);
-	putfont8(bootinfo->vram, bootinfo->scrnx, 64, 8, COL8_FFFFFF, hankaku + 'O' * 16);
-	putfont8(bootinfo->vram, bootinfo->scrnx, 72, 8, COL8_FFFFFF, hankaku + 'S' * 16);
+	putfonts(bootinfo->vram, bootinfo->scrnx,  8, 8, COL8_FFFFFF, "hello zOS");
+	putfonts(bootinfo->vram, bootinfo->scrnx,  8, 31, COL8_FFFFFF, "2019.10.19 updata");
+	sprintf(s1, "x resolution is %d", bootinfo->scrnx);
+	sprintf(s2, "y resolution is %d", bootinfo->scrny);
+	putfonts(bootinfo->vram, bootinfo->scrnx, 16, 64, COL8_FFFFFF, s1);
+	putfonts(bootinfo->vram, bootinfo->scrnx, 16, 96, COL8_FFFFFF, s2);
+	init_mouse_cursor8(mouse, COL8_008484);
+	putblock8_8(bootinfo->vram, bootinfo->scrnx, 16, 16, cx, cy, mouse, 16);
 	while(1){
 		io_hlt();
 	}
@@ -148,6 +157,61 @@ void putfont8(char *vram, int xsize, int x, int y, char color, char *font){
 		if ((d & 0x04) != 0) { p[5] = color; }
 		if ((d & 0x02) != 0) { p[6] = color; }
 		if ((d & 0x01) != 0) { p[7] = color; }
+	}
+	return;
+}
+
+void putfonts(char *vram, int xsize, int x, int y, char c, unsigned char *s){
+	extern char hankaku[4096];
+	for(; *s != 0x00; s++){
+		putfont8(vram,xsize,x,y,c,hankaku + *s * 16);
+		x +=8 ;
+	}
+}
+
+void init_mouse_cursor8(char *mouse, char bc){
+	static char cursor[16][16] = {
+		"**************..",
+		"*OOOOOOOOOOO*...",
+		"*OOOOOOOOOO*....",
+		"*OOOOOOOOO*.....",
+		"*OOOOOOOO*......",
+		"*OOOOOOO*.......",
+		"*OOOOOOO*.......",
+		"*OOOOOOOO*......",
+		"*OOOO**OOO*.....",
+		"*OOO*..*OOO*....",
+		"*OO*....*OOO*...",
+		"*O*......*OOO*..",
+		"**........*OOO*.",
+		"*..........*OOO*",
+		"............*OO*",
+		".............***"
+	};
+	int x, y;
+
+	for (y = 0; y < 16; y++) {
+		for (x = 0; x < 16; x++) {
+			if (cursor[y][x] == '*') {
+				mouse[y * 16 + x] = COL8_000000;
+			}
+			if (cursor[y][x] == 'O') {
+				mouse[y * 16 + x] = COL8_FFFFFF;
+			}
+			if (cursor[y][x] == '.') {
+				mouse[y * 16 + x] = bc;
+			}
+		}
+	}
+	return;
+}
+
+void putblock8_8(char *vram, int vxsize, int pxsize, int pysize, int px0, int py0, char *buf, int bxsize){
+	int x, y;
+	for (y = 0; y < pysize; y++) {
+		for (x = 0; x < pxsize; x++) {
+			vram[(py0 + y) * vxsize + (px0 + x)] = buf[y * bxsize + x];
+		}
 	}
 	return;
 }

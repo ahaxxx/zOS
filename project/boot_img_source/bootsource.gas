@@ -1,4 +1,13 @@
 	.file	"bootsource.c"
+	.data
+LC0:
+	.ascii "hello zOS\0"
+LC1:
+	.ascii "2019.10.19 updata\0"
+LC2:
+	.ascii "x resolution is %d\0"
+LC3:
+	.ascii "y resolution is %d\0"
 	.text
 	.balign 2
 .globl _HariMain
@@ -6,6 +15,12 @@
 _HariMain:
 	pushl	%ebp
 	movl	%esp, %ebp
+	pushl	%edi
+	pushl	%esi
+	pushl	%ebx
+	leal	-108(%ebp), %esi
+	subl	$356, %esp
+	leal	-60(%ebp), %ebx
 	call	_init_palette
 	movswl	4086,%eax
 	pushl	%eax
@@ -13,75 +28,80 @@ _HariMain:
 	pushl	%eax
 	pushl	4088
 	call	_init_screen
-	pushl	$_hankaku+1152
+	movl	$2, %ecx
+	movswl	4084,%eax
+	leal	-16(%eax), %edx
+	movl	%edx, %eax
+	cltd
+	idivl	%ecx
+	movswl	4086,%edx
+	subl	$44, %edx
+	movl	%eax, -368(%ebp)
+	movl	%edx, %eax
+	pushl	$LC0
+	cltd
+	idivl	%ecx
 	pushl	$7
+	movl	%eax, %edi
 	pushl	$8
 	pushl	$8
 	movswl	4084,%eax
 	pushl	%eax
 	pushl	4088
-	call	_putfont8
+	call	_putfonts
 	addl	$36, %esp
-	pushl	$_hankaku+1104
+	pushl	$LC1
 	pushl	$7
+	pushl	$31
 	pushl	$8
+	movswl	4084,%eax
+	pushl	%eax
+	pushl	4088
+	call	_putfonts
+	movswl	4084,%eax
+	pushl	%eax
+	pushl	$LC2
+	pushl	%ebx
+	call	_sprintf
+	addl	$36, %esp
+	movswl	4086,%eax
+	pushl	%eax
+	pushl	$LC3
+	pushl	%esi
+	call	_sprintf
+	pushl	%ebx
+	pushl	$7
+	leal	-364(%ebp), %ebx
+	pushl	$64
 	pushl	$16
 	movswl	4084,%eax
 	pushl	%eax
 	pushl	4088
-	call	_putfont8
-	pushl	$_hankaku+1216
+	call	_putfonts
+	addl	$36, %esp
+	pushl	%esi
 	pushl	$7
-	pushl	$8
-	pushl	$24
+	pushl	$96
+	pushl	$16
 	movswl	4084,%eax
 	pushl	%eax
 	pushl	4088
-	call	_putfont8
-	addl	$48, %esp
-	pushl	$_hankaku+1216
-	pushl	$7
-	pushl	$8
-	pushl	$32
+	call	_putfonts
+	pushl	$14
+	pushl	%ebx
+	call	_init_mouse_cursor8
+	addl	$32, %esp
+	pushl	$16
+	pushl	%ebx
+	pushl	%edi
+	pushl	-368(%ebp)
+	pushl	$16
+	pushl	$16
 	movswl	4084,%eax
 	pushl	%eax
 	pushl	4088
-	call	_putfont8
-	pushl	$_hankaku+1264
-	pushl	$7
-	pushl	$8
-	pushl	$40
-	movswl	4084,%eax
-	pushl	%eax
-	pushl	4088
-	call	_putfont8
-	addl	$48, %esp
-	pushl	$_hankaku+1952
-	pushl	$7
-	pushl	$8
-	pushl	$56
-	movswl	4084,%eax
-	pushl	%eax
-	pushl	4088
-	call	_putfont8
-	pushl	$_hankaku+1264
-	pushl	$7
-	pushl	$8
-	pushl	$64
-	movswl	4084,%eax
-	pushl	%eax
-	pushl	4088
-	call	_putfont8
-	addl	$48, %esp
-	pushl	$_hankaku+1328
-	pushl	$7
-	pushl	$8
-	pushl	$72
-	movswl	4084,%eax
-	pushl	%eax
-	pushl	4088
-	call	_putfont8
-	addl	$24, %esp
+	call	_putblock8_8
+	addl	$32, %esp
 L5:
 	call	_io_hlt
 	jmp	L5
@@ -518,12 +538,175 @@ L34:
 	popl	%edi
 	popl	%ebp
 	ret
+	.balign 2
+.globl _putfonts
+	.def	_putfonts;	.scl	2;	.type	32;	.endef
+_putfonts:
+	pushl	%ebp
+	movl	%esp, %ebp
+	pushl	%edi
+	pushl	%esi
+	pushl	%ebx
+	pushl	%eax
+	movl	28(%ebp), %ebx
+	movb	24(%ebp), %al
+	movb	%al, -13(%ebp)
+	movl	16(%ebp), %esi
+	movl	20(%ebp), %edi
+	cmpb	$0, (%ebx)
+	jne	L52
+L54:
+	leal	-12(%ebp), %esp
+	popl	%ebx
+	popl	%esi
+	popl	%edi
+	popl	%ebp
+	ret
+L52:
+	movzbl	(%ebx), %eax
+	sall	$4, %eax
+	incl	%ebx
+	addl	$_hankaku, %eax
+	pushl	%eax
+	movsbl	-13(%ebp),%eax
+	pushl	%eax
+	pushl	%edi
+	pushl	%esi
+	addl	$8, %esi
+	pushl	12(%ebp)
+	pushl	8(%ebp)
+	call	_putfont8
+	addl	$24, %esp
+	cmpb	$0, (%ebx)
+	jne	L52
+	jmp	L54
+	.data
+_cursor.1:
+	.ascii "**************.."
+	.ascii "*OOOOOOOOOOO*..."
+	.ascii "*OOOOOOOOOO*...."
+	.ascii "*OOOOOOOOO*....."
+	.ascii "*OOOOOOOO*......"
+	.ascii "*OOOOOOO*......."
+	.ascii "*OOOOOOO*......."
+	.ascii "*OOOOOOOO*......"
+	.ascii "*OOOO**OOO*....."
+	.ascii "*OOO*..*OOO*...."
+	.ascii "*OO*....*OOO*..."
+	.ascii "*O*......*OOO*.."
+	.ascii "**........*OOO*."
+	.ascii "*..........*OOO*"
+	.ascii "............*OO*"
+	.ascii ".............***"
+	.text
+	.balign 2
+.globl _init_mouse_cursor8
+	.def	_init_mouse_cursor8;	.scl	2;	.type	32;	.endef
+_init_mouse_cursor8:
+	pushl	%ebp
+	movl	%esp, %ebp
+	pushl	%edi
+	pushl	%esi
+	xorl	%edi, %edi
+	pushl	%ebx
+	xorl	%ebx, %ebx
+	pushl	%eax
+	movb	12(%ebp), %al
+	movl	8(%ebp), %esi
+	movb	%al, -13(%ebp)
+L68:
+	xorl	%edx, %edx
+L67:
+	leal	(%edx,%edi), %eax
+	cmpb	$42, _cursor.1(%eax)
+	je	L73
+L64:
+	cmpb	$79, _cursor.1(%eax)
+	je	L74
+L65:
+	cmpb	$46, _cursor.1(%eax)
+	je	L75
+L62:
+	incl	%edx
+	cmpl	$15, %edx
+	jle	L67
+	incl	%ebx
+	addl	$16, %edi
+	cmpl	$15, %ebx
+	jle	L68
+	popl	%eax
+	popl	%ebx
+	popl	%esi
+	popl	%edi
+	popl	%ebp
+	ret
+L75:
+	movb	-13(%ebp), %cl
+	movb	%cl, (%eax,%esi)
+	jmp	L62
+L74:
+	movb	$7, (%eax,%esi)
+	jmp	L65
+L73:
+	movb	$0, (%eax,%esi)
+	jmp	L64
+	.balign 2
+.globl _putblock8_8
+	.def	_putblock8_8;	.scl	2;	.type	32;	.endef
+_putblock8_8:
+	pushl	%ebp
+	movl	%esp, %ebp
+	pushl	%edi
+	pushl	%esi
+	xorl	%esi, %esi
+	pushl	%ebx
+	subl	$12, %esp
+	cmpl	20(%ebp), %esi
+	jge	L88
+	xorl	%edi, %edi
+L86:
+	xorl	%ebx, %ebx
+	cmpl	16(%ebp), %ebx
+	jge	L90
+	movl	32(%ebp), %eax
+	addl	%edi, %eax
+	movl	%eax, -20(%ebp)
+L85:
+	movl	28(%ebp), %eax
+	movl	24(%ebp), %edx
+	addl	%esi, %eax
+	addl	%ebx, %edx
+	imull	12(%ebp), %eax
+	addl	%edx, %eax
+	movl	8(%ebp), %ecx
+	movl	-20(%ebp), %edx
+	incl	%ebx
+	movb	(%edx), %dl
+	movb	%dl, (%eax,%ecx)
+	incl	-20(%ebp)
+	cmpl	16(%ebp), %ebx
+	jl	L85
+L90:
+	incl	%esi
+	addl	36(%ebp), %edi
+	cmpl	20(%ebp), %esi
+	jl	L86
+L88:
+	addl	$12, %esp
+	popl	%ebx
+	popl	%esi
+	popl	%edi
+	popl	%ebp
+	ret
 	.def	_io_store_eflags;	.scl	2;	.type	32;	.endef
 	.def	_io_out8;	.scl	2;	.type	32;	.endef
 	.def	_io_cli;	.scl	2;	.type	32;	.endef
 	.def	_io_load_eflags;	.scl	2;	.type	32;	.endef
 	.def	_set_palette;	.scl	2;	.type	32;	.endef
 	.def	_io_hlt;	.scl	2;	.type	32;	.endef
-	.def	_putfont8;	.scl	2;	.type	32;	.endef
+	.def	_putblock8_8;	.scl	2;	.type	32;	.endef
+	.def	_init_mouse_cursor8;	.scl	2;	.type	32;	.endef
+	.def	_sprintf;	.scl	2;	.type	32;	.endef
+	.def	_putfonts;	.scl	2;	.type	32;	.endef
 	.def	_init_screen;	.scl	2;	.type	32;	.endef
 	.def	_init_palette;	.scl	2;	.type	32;	.endef
