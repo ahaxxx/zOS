@@ -3,25 +3,25 @@
 
 void HariMain(void)
 {	
-	struct Bootinfo *bootinfo;
-	char s1[40],s2[40],mouse[256];
+	struct Bootinfo *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
+	char s[40],mouse[256];
 	int cx,cy;
 
-	init_palette();
-	bootinfo = (struct Bootinfo *) 0x0ff0;
-	init_screen(bootinfo->vram, bootinfo->scrnx, bootinfo->scrny);
+	init_gdtidt();
+	init_pic();
+	io_sti(); 
 	
-	cx = (bootinfo->scrnx - 16) / 2;
-	cy = (bootinfo->scrny - 28 - 16) / 2;
-
-	putfonts(bootinfo->vram, bootinfo->scrnx,  8, 8, COL8_FFFFFF, "hello zOS");
-	putfonts(bootinfo->vram, bootinfo->scrnx,  8, 31, COL8_FFFFFF, "2019.10.19 updata");
-	sprintf(s1, "x resolution is %d", bootinfo->scrnx);
-	sprintf(s2, "y resolution is %d", bootinfo->scrny);
-	putfonts(bootinfo->vram, bootinfo->scrnx, 16, 64, COL8_FFFFFF, s1);
-	putfonts(bootinfo->vram, bootinfo->scrnx, 16, 96, COL8_FFFFFF, s2);
+	init_palette();
+	init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
+	cx = (binfo->scrnx - 16) / 2;
+	cy = (binfo->scrny - 28 - 16) / 2;
 	init_mouse_cursor8(mouse, COL8_008484);
-	putblock8_8(bootinfo->vram, bootinfo->scrnx, 16, 16, cx, cy, mouse, 16);
+	putblock8_8(binfo->vram, binfo->scrnx, 16, 16, cx, cy, mouse, 16);
+	sprintf(s, "(%d, %d)", cx, cy);
+	putfonts(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
+
+	io_out8(PIC0_IMR, 0xf9);
+	io_out8(PIC1_IMR, 0xef); 
 	while(1){
 		io_hlt();
 	}

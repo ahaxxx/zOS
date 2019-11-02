@@ -1,8 +1,6 @@
 #include "bootsource.h"
 
-void init_pic(void)
-/*PIC初始化*/
-{
+void init_pic(void){
 	io_out8(PIC0_IMR,  0xff  ); 
 	io_out8(PIC1_IMR,  0xff  ); 
 
@@ -19,5 +17,28 @@ void init_pic(void)
 	io_out8(PIC0_IMR,  0xfb  ); 
 	io_out8(PIC1_IMR,  0xff  ); 
 
+	return;
+}
+
+void inthandler21(int *esp){
+	struct Bootinfo *binfo = (struct Bootinfo *) ADR_BOOTINFO;
+	boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 0, 32 * 8 - 1, 15);
+	putfonts(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, "INT 21 (IRQ-1) : PS/2 keyboard");
+	for (;;) {
+		io_hlt();
+	}
+}
+
+void inthandler2c(int *esp){
+	struct Bootinfo *binfo = (struct Bootinfo *) ADR_BOOTINFO;
+	boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 0, 32 * 8 - 1, 15);
+	putfonts(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, "INT 2C (IRQ-12) : PS/2 mouse");
+	for (;;) {
+		io_hlt();
+	}
+}
+
+void inthandler27(int *esp){
+	io_out8(PIC0_OCW2, 0x67); /* IRQ-07受付完了をPICに通知(7-1参照) */
 	return;
 }

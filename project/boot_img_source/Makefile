@@ -1,4 +1,4 @@
-OBJS_BOOTPACK = bootsource.obj naskfunc.obj hankaku.obj gui.obj dsctbl.obj
+OBJS_BOOTPACK = bootsource.obj naskfunc.obj hankaku.obj gui.obj dsctbl.obj int.obj
 TOOLPATH = ../z_tools/
 INCPATH  = ../z_tools/headfile_of_C/
 
