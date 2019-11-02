@@ -1,3 +1,4 @@
+OBJS_BOOTPACK = bootsource.obj naskfunc.obj hankaku.obj gui.obj dsctbl.obj
 TOOLPATH = ../z_tools/
 INCPATH  = ../z_tools/headfile_of_C/
 
@@ -30,27 +31,15 @@ ipl10.bin : ipl10.nas Makefile
 asmhead.bin : asmhead.nas Makefile
 	$(NASK) asmhead.nas asmhead.bin asmhead.lst
 
-bootsource.gas : bootsource.c Makefile
-	$(CC1) -o bootsource.gas bootsource.c
-
-bootsource.nas : bootsource.gas Makefile
-	$(GAS2NASK) bootsource.gas bootsource.nas
-
-bootsource.obj : bootsource.nas Makefile
-	$(NASK) bootsource.nas bootsource.obj bootsource.lst
-
-naskfunc.obj : naskfunc.nas Makefile
-	$(NASK) naskfunc.nas naskfunc.obj naskfunc.lst
-
 hankaku.bin : hankaku.txt Makefile
 	$(MAKEFONT) hankaku.txt hankaku.bin
 
 hankaku.obj : hankaku.bin Makefile
 	$(BIN2OBJ) hankaku.bin hankaku.obj _hankaku
 
-bootsource.bim : bootsource.obj naskfunc.obj hankaku.obj Makefile
+bootsource.bim : $(OBJS_BOOTPACK) Makefile
 	$(OBJ2BIM) @$(RULEFILE) out:bootsource.bim stack:3136k map:bootsource.map \
-		bootsource.obj naskfunc.obj hankaku.obj
+		$(OBJS_BOOTPACK)
 # 3MB+64KB=3136KB
 
 bootsource.hrb : bootsource.bim Makefile
@@ -64,6 +53,17 @@ zOS.img : ipl10.bin zOS.sys Makefile
 		wbinimg src:ipl10.bin len:512 from:0 to:0 \
 		copy from:zOS.sys to:@: \
 		imgout:zOS.img
+
+#一般规则
+
+%.gas : %.c Makefile
+	$(CC1) -o $*.gas $*.c
+
+%.nas : %.gas Makefile
+	$(GAS2NASK) $*.gas $*.nas
+
+%.obj : %.nas Makefile
+	$(NASK) $*.nas $*.obj $*.lst
 
 # 命令
 
@@ -83,9 +83,7 @@ install :
 clean :
 	-$(DEL) *.bin
 	-$(DEL) *.lst
-	-$(DEL) *.gas
 	-$(DEL) *.obj
-	-$(DEL) bootsource.nas
 	-$(DEL) bootsource.map
 	-$(DEL) bootsource.bim
 	-$(DEL) bootsource.hrb
