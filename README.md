@@ -14,3 +14,5 @@ You can contact with me by email:liubingxing@nucosc.com
   * 加入了ASCII编码的单个字符显示。
 * 2019.10.19
   * 增加了鼠标指针，增加了在屏幕上打印字符串以及变量内容的功能。
+* 2019.11.02
+  * 将内核文件进行了分割，并在内核指令中加入了中断，为下一步的I/O功能做铺垫
