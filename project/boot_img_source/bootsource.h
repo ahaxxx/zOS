@@ -77,7 +77,6 @@ void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
 #define AR_CODE32_ER	0x409a
 #define AR_INTGATE32	0x008e
 
-
 /*------------------int.c---------------------*/
 void init_pic(void);
 void inthandler21(int *esp);
