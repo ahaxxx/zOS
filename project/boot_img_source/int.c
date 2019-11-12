@@ -19,14 +19,18 @@ void init_pic(void){
 
 	return;
 }
-
+struct KEYBUF keybuf;
 void inthandler21(int *esp){
-	struct Bootinfo *binfo = (struct Bootinfo *) ADR_BOOTINFO;
-	boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 0, 32 * 8 - 1, 15);
-	putfonts(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, "INT 21 (IRQ-1) : PS/2 keyboard");
-	for (;;) {
-		io_hlt();
+	//键盘输入监控
+	unsigned char data;
+	io_out8(PIC0_OCW2, 0x61);	
+	data = io_in8(PORT_KEYDAT);
+
+	if(keybuf.flag == 0){
+		keybuf.data = data;
+		keybuf.flag = 1;
 	}
+	return;
 }
 
 void inthandler2c(int *esp){
