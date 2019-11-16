@@ -20,3 +20,5 @@ You can contact with me by email:liubingxing@nucosc.com
   * 加入了键盘与zOS之间的交互，但是目前只能是通过键盘触发中断。
 * 2019.11.12
   * 取消了中断，键值储存在变量中。
+* 2019.11.16
+  * 加入了缓冲区，为下一步鼠标交互做准备

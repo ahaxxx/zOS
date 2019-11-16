@@ -1,5 +1,9 @@
 #include "bootsource.h"
 
+#define PORT_KEYDAT		0x0060
+
+struct FIFO keyfifo;
+
 void init_pic(void){
 	io_out8(PIC0_IMR,  0xff  ); 
 	io_out8(PIC1_IMR,  0xff  ); 
@@ -19,17 +23,14 @@ void init_pic(void){
 
 	return;
 }
-struct KEYBUF keybuf;
+
+
 void inthandler21(int *esp){
 	//键盘输入监控
 	unsigned char data;
 	io_out8(PIC0_OCW2, 0x61);	
 	data = io_in8(PORT_KEYDAT);
-
-	if(keybuf.flag == 0){
-		keybuf.data = data;
-		keybuf.flag = 1;
-	}
+	fifo_put(&keyfifo,data);
 	return;
 }
 
@@ -43,6 +44,6 @@ void inthandler2c(int *esp){
 }
 
 void inthandler27(int *esp){
-	io_out8(PIC0_OCW2, 0x67); /* IRQ-07受付完了をPICに通知(7-1参照) */
+	io_out8(PIC0_OCW2, 0x67);
 	return;
 }

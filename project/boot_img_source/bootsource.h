@@ -7,8 +7,9 @@ struct Bootinfo {
 	char *vram;
 };
 
-struct KEYBUF{
-	unsigned char data,flag;
+struct FIFO{
+	unsigned char *buf;
+	int p, q, size, free, flags;
 };
 
 #define ADR_BOOTINFO	0x00000ff0
@@ -16,6 +17,7 @@ struct KEYBUF{
 void io_hlt(void);
 void io_cli(void);
 void io_sti(void);
+void io_stihlt(void);
 void io_out8(int port, int data);
 int io_in8(int port);
 int io_load_eflags(void);
@@ -86,11 +88,12 @@ void set_gatedesc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
 
 /*------------------int.c---------------------*/
 
+
 void init_pic(void);
 void inthandler21(int *esp);
 void inthandler27(int *esp);
 void inthandler2c(int *esp);
-#define PORT_KEYDAT		0x0060
+
 #define PIC0_ICW1		0x0020
 #define PIC0_OCW2		0x0020
 #define PIC0_IMR		0x0021
@@ -103,3 +106,11 @@ void inthandler2c(int *esp);
 #define PIC1_ICW2		0x00a1
 #define PIC1_ICW3		0x00a1
 #define PIC1_ICW4		0x00a1
+
+/*--------------------fifo.c-------------------*/
+
+
+void fifo_init(struct FIFO *fifo, int size,unsigned char *buf);
+int fifo_put(struct FIFO *fifo,unsigned char data);
+int fifo_get(struct FIFO * fifo);
+int fifo_status(struct FIFO * fifo);
