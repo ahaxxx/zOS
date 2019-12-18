@@ -1,5 +1,13 @@
 /*-----以上函数存在于naskfunc.nas中-----*/
 #include <stdio.h>
+
+#define MEMMAN_FREES		4090	/* これで約32KB */
+#define MEMMAN_ADDR			0x003c0000
+#define EFLAGS_AC_BIT		0x00040000
+#define CR0_CACHE_DISABLE	0x60000000
+#define MAX_SHEETS			256
+#define SHEET_USE			1
+
 struct Bootinfo {
 	//引导信息
 	char cyls, leds, vmode, reserve;
@@ -10,6 +18,41 @@ struct Bootinfo {
 struct FIFO{
 	unsigned char *buf;
 	int p, q, size, free, flags;
+};
+
+struct MOUSE_DEC {
+	unsigned char buf[3], phase;
+	int x,y,btn;
+};
+
+//空闲内存
+struct FREEINFO {	/* あき情報 */
+	unsigned int addr, size;
+};
+
+//内存管理结构体
+struct MEMMAN {
+	int frees, maxfrees, lostsize, losts;
+	struct FREEINFO free[MEMMAN_FREES];
+};
+
+//图层结构体
+struct SHEET{
+	unsigned char *buf;
+	int bxsize,bysize,vx0,vy0,col_inv,height,flags;
+	struct SHTCTL *ctl;
+};
+
+//图层管理结构体
+struct SHTCTL{
+	unsigned char *vram, *map;
+	int xsize,ysize,top;
+	struct SHEET *sheets[MAX_SHEETS];
+	struct SHEET sheets0[MAX_SHEETS];
+};
+
+struct TIMECTL{
+	unsigned int count;
 };
 
 #define ADR_BOOTINFO	0x00000ff0
@@ -24,10 +67,13 @@ int io_load_eflags(void);
 void io_store_eflags(int eflags);
 void load_gdtr(int limit, int addr);
 void load_idtr(int limit, int addr);
+void asm_inthandler20(void);
 void asm_inthandler21(void);
 void asm_inthandler27(void);
 void asm_inthandler2c(void);
-
+int load_cr0(void);
+void store_cr0(int cr0);
+unsigned int memtest_sub(unsigned int start, unsigned int end);
 
 /*-----以下函数存在于gui.c-------*/
 void init_palette(void);
@@ -114,3 +160,36 @@ void fifo_init(struct FIFO *fifo, int size,unsigned char *buf);
 int fifo_put(struct FIFO *fifo,unsigned char data);
 int fifo_get(struct FIFO * fifo);
 int fifo_status(struct FIFO * fifo);
+
+/*--------------------mouse.c-------------------*/
+void wait_KBC_sendready(void);
+void init_keyboard(void);
+void enable_mouse(struct MOUSE_DEC *mdec);
+int mouse_decode(struct MOUSE_DEC *mdec, unsigned char dat);
+
+/*------------------memory.c---------------------*/
+unsigned int memtest(unsigned int start ,unsigned int end);
+void memman_init(struct MEMMAN *man);
+unsigned int memman_total(struct MEMMAN *man);
+unsigned int memman_alloc(struct MEMMAN *man,unsigned int size);
+int memman_free(struct MEMMAN *man,unsigned int addr,unsigned int size);
+unsigned int memman_alloc_4k(struct MEMMAN *man,unsigned int size);
+int memman_free_4k(struct MEMMAN *man, unsigned int addr, unsigned int size);
+
+/*------------------sheet.c----------------------*/
+struct SHTCTL *shtctl_init(struct MEMMAN *memman,unsigned char *vram,int xsize,int ysize);
+struct SHEET *sheet_alloc(struct SHTCTL *ctl);
+void sheet_setbuf(struct SHEET *sht,unsigned char *buf,int xsize,int ysize,int col_inv);
+void sheet_updown(struct SHEET *sht,int height);
+void sheet_refresh(struct SHEET *sht,int bx0,int by0,int bx1,int by1);
+void sheet_slide(struct SHEET *sht,int vx0,int vy0);
+void sheet_free(struct SHEET *sht);
+void sheet_refreshsub(struct SHTCTL *ctl,int vx0,int vy0,int vx1,int vy1,int h0,int h1);
+void sheet_refreshmap(struct SHTCTL *ctl,int vx0,int vy0,int vx1,int vy1,int h0);
+
+/*-----------------windows.c------------------------*/
+void make_windows(unsigned char *buf,int xsize,int ysize,char *title);
+
+/*------------------time.c-----------------------*/
+void init_pit(void);
+void inthandler20(int *esp);

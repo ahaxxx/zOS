@@ -1,38 +1,129 @@
 #include<stdio.h>
 #include"bootsource.h"
-extern struct FIFO keyfifo;
+extern struct FIFO keyfifo,mousefifo;
+extern struct MEMMAN;
+extern struct FREEINFO;
+extern struct TIMECTL timectl;
 
-void HariMain(void)
-{	
+void HariMain(void){
 	struct Bootinfo *binfo = (struct BOOTINFO *) ADR_BOOTINFO;
-	char s[40],mouse[256],keybuf[32];
+	char s[40],mouse[256],keybuf[32],mousebuf[128];
 	int cx,cy,i;
+	unsigned int memtotal,count = 0;
+	extern struct MOUSE_DEC mdec;
+	struct MEMMAN *memman = (struct MEMMAN *) MEMMAN_ADDR;
+	struct SHTCTL *shtctl;
+	struct SHEET *sht_back, *sht_mouse, *sht_win;
+	unsigned char *buf_back, buf_mouse[256], *buf_win;
+
 	init_gdtidt();
 	init_pic();
-	io_sti(); 
-
-	io_out8(PIC0_IMR,0xf9);
-	io_out8(PIC1_IMR,0xef);
+	io_sti(); /* IDT/PICの初期化が終わったのでCPUの割り込み禁止を解除 */
+	fifo_init(&keyfifo, 32, keybuf);
+	fifo_init(&mousefifo, 128, mousebuf);
+	init_pit();
+	io_out8(PIC0_IMR, 0xf9); /* PITとPIC1とキーボードを許可(11111000) */
+	io_out8(PIC1_IMR, 0xef); /* マウスを許可(11101111) */
 	
+	init_keyboard();
+	enable_mouse(&mdec);
+	memtotal = memtest(0x00400000, 0xbfffffff);
+	memman_init(memman);
+	memman_free(memman, 0x00001000, 0x0009e000); /* 0x00001000 - 0x0009efff */
+	memman_free(memman, 0x00400000, memtotal - 0x00400000);
+
+
 	init_palette();
-	init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
+	shtctl = shtctl_init(memman, binfo->vram, binfo->scrnx, binfo->scrny);
+
+	sht_back  = sheet_alloc(shtctl);
+	sht_mouse = sheet_alloc(shtctl);
+	sht_win = sheet_alloc(shtctl);
+
+	buf_back  = (unsigned char *) memman_alloc_4k(memman, binfo->scrnx * binfo->scrny);
+	buf_win = (unsigned char *) memman_alloc_4k(memman,160 * 68);
+
+	sheet_setbuf(sht_back, buf_back, binfo->scrnx, binfo->scrny, -1); /* 透明色なし */
+	sheet_setbuf(sht_mouse, buf_mouse, 16, 16, 99);
+	sheet_setbuf(sht_win,buf_win,160,68,-1);
+
+	init_screen(buf_back, binfo->scrnx, binfo->scrny);
+	init_mouse_cursor8(buf_mouse,99);
+
+	make_windows(buf_win,160,68,"zOS-counter");
+	putfonts(buf_win,160,24,28,COL8_000000,"counter:");
+
+	sheet_slide(sht_back, 0, 0);
 	cx = (binfo->scrnx - 16) / 2;
 	cy = (binfo->scrny - 28 - 16) / 2;
-	init_mouse_cursor8(mouse, COL8_008484);
-	putblock8_8(binfo->vram, binfo->scrnx, 16, 16, cx, cy, mouse, 16);
+	sheet_slide(sht_mouse, cx, cy);
+	sheet_slide(sht_win,80,72);
+
+	sheet_updown(sht_back,  0);
+	sheet_updown(sht_mouse, 2);
+	sheet_updown(sht_win,1);
+
 	sprintf(s, "(%d, %d)", cx, cy);
-	putfonts(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
-	fifo_init(&keyfifo,32,keybuf);
+	putfonts(buf_back, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
+	sprintf(s, "RAM %dMB   free : %dKB",memtotal / (1024 * 1024), memman_total(memman) / 1024);
+	putfonts(buf_back, binfo->scrnx, 0, 32, COL8_FFFFFF, s);
+	sheet_refresh(sht_back,0,0,binfo->scrnx,48);
 	while(1){
+		count++; 
+		sprintf(s,"%010d",count);
+		boxfill8(buf_win,160,COL8_C6C6C6,40,44,119,59);
+		putfonts(buf_win,160,40,44,COL8_000000,s);
+		sheet_refresh(sht_win,40,44,120,60);
+
 		io_cli();
-		if(fifo_status(&keyfifo) == 0){
-			io_stihlt();
-		}else{
-			i = fifo_get(&keyfifo);
+		if(fifo_status(&keyfifo) == 0 && fifo_status(&mousefifo) == 0){
 			io_sti();
-			sprintf(s, "%02X", i);
-			boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
-			putfonts(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
+		}else{
+			if (fifo_status(&keyfifo) != 0){
+				i = fifo_get(&keyfifo);
+				io_sti();
+				sprintf(s, "%02X", i);
+				boxfill8(buf_back, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
+				putfonts(buf_back, binfo->scrnx, 0, 16, COL8_FFFFFF, s);
+				sheet_refresh(sht_back,0,16,16,32);
+			}else if(fifo_status(&mousefifo) != 0){
+				i = fifo_get(&mousefifo);
+				io_sti();
+				if(mouse_decode(&mdec , i) != 0){
+					sprintf(s, "[lcr %4d %4d]",mdec.x,mdec.y);
+					if((mdec.btn & 0x01) != 0){
+						s[1] = 'L';
+					}
+					if((mdec.btn & 0x02) != 0){
+						s[3] = 'R';
+					}
+					if((mdec.btn & 0x04) != 0){
+						s[2] = 'C';
+					}
+					boxfill8(buf_back, binfo->scrnx, COL8_008484, 32, 16, 32 + 15 * 8 - 1, 31);
+					putfonts(buf_back, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
+					sheet_refresh(sht_back,32,16,32 + 15 * 8,32);
+					cx += mdec.x;
+					cy += mdec.y;
+					if (cx < 0) {
+						cx = 0;
+					}
+					if (cy < 0) {
+						cy = 0;
+					}
+					if (cx > binfo->scrnx - 1) {
+						cx = binfo->scrnx - 1;
+					}
+					if (cy > binfo->scrny - 1) {
+						cy = binfo->scrny - 1;
+					}
+					sprintf(s, "(%3d, %3d)", cx, cy);
+					boxfill8(buf_back, binfo->scrnx, COL8_008484, 0, 0, 79, 15);
+					putfonts(buf_back, binfo->scrnx, 0, 0, COL8_FFFFFF, s);
+					sheet_refresh(sht_back,0,0,80,16);
+					sheet_slide(sht_mouse, cx, cy);
+				}
+			}
 		}
 	}
 }

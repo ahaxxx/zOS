@@ -1,6 +1,16 @@
 ; zOS boot asm
 ; TAB=4
 
+[INSTRSET "i486p"]
+
+VBEMODE	EQU		0x105			;1280 x 1024 x 8
+
+;	0x100 :  640 x  400 x 8bit
+;	0x101 :  640 x  480 x 8bit
+;	0x103 :  800 x  600 x 8bit
+;	0x105 : 1024 x  768 x 8bit
+;	0x107 : 1280 x 1024 x 8bit
+
 BOTPAK	EQU		0x00280000		; bootsource
 DSKCAC	EQU		0x00100000		; 磁盘缓存位置
 DSKCAC0	EQU		0x00008000		; 磁盘缓存位置(实时模式)
@@ -15,18 +25,64 @@ VRAM	EQU		0x0ff8			; 开始地址
 
 		ORG		0xc200			; 程序装载地址
 
-; 设定画面模式
+; VBE存在确认
 
-		MOV		AL,0x13			; VGA模式输出 320*200分辨率 8位色
+		MOV		AX,0x9000
+		MOV		ES,AX
+		MOV		DI,0
+		MOV		AX,0x4f00
+		INT		0x10
+		CMP		AX,0x004f
+		JNE		scrn320
+
+; VBE版本检查
+
+		MOV		AX,[ES:DI+4]
+		CMP		AX,0x0200
+		JB		scrn320	
+
+; 取得画面模式信息
+
+		MOV		CX,VBEMODE
+		MOV		AX,0x4f01
+		INT		0x10
+		CMP		AX,0x004f
+		JNE		scrn320
+
+; 确认画面模式信息
+
+		CMP		BYTE [ES:DI+0x19],8
+		JNE		scrn320
+		CMP		BYTE [ES:DI+0x1b],4
+		JNE		scrn320
+		MOV		AX,[ES:DI+0x00]
+		AND		AX,0x0080
+		JZ		scrn320	
+
+; 画面模式切换
+
+		MOV		BX,VBEMODE+0x4000
+		MOV		AX,0x4f02
+		INT		0x10
+		MOV		BYTE [VMODE],8
+		MOV		AX,[ES:DI+0x12]
+		MOV		[SCRNX],AX
+		MOV		AX,[ES:DI+0x14]
+		MOV		[SCRNY],AX
+		MOV		EAX,[ES:DI+0x28]
+		MOV		[VRAM],EAX
+		JMP		keystatus
+
+scrn320:
+		MOV		AL,0x13			
 		MOV		AH,0x00
 		INT		0x10
-		MOV		BYTE [VMODE],8	; 记录画面模式(参照C语言)
+		MOV		BYTE [VMODE],8	
 		MOV		WORD [SCRNX],320
 		MOV		WORD [SCRNY],200
 		MOV		DWORD [VRAM],0x000a0000
 
-; 从BIOS获取键盘LED状态
-
+keystatus:
 		MOV		AH,0x02
 		INT		0x16 			; keyboard BIOS
 		MOV		[LEDS],AL
@@ -69,54 +125,53 @@ pipelineflush:
 		MOV		GS,AX
 		MOV		SS,AX
 
-; bootsourceの転送
-
-		MOV		ESI,bootsource	; 転送元
-		MOV		EDI,BOTPAK		; 転送先
+; bootsource传送
+;C语言写法 memcpy(bootsource , BOTPAK , 512*1024/4)
+		MOV		ESI,bootsource	; 传送源
+		MOV		EDI,BOTPAK		; 传送目标
 		MOV		ECX,512*1024/4
 		CALL	memcpy
 
-; ついでにディスクデータも本来の位置へ転送
+; 硬盘数据复位
 
-; まずはブートセクタから
-
-		MOV		ESI,0x7c00		; 転送元
-		MOV		EDI,DSKCAC		; 転送先
+; 启动扇区
+; C语言写法 memcpy(0x7c00 , DSKCAC , 512/4)
+		MOV		ESI,0x7c00		; 传送源
+		MOV		EDI,DSKCAC		; 传送目标
 		MOV		ECX,512/4
 		CALL	memcpy
 
-; 残り全部
-
-		MOV		ESI,DSKCAC0+512	; 転送元
-		MOV		EDI,DSKCAC+512	; 転送先
+; 剩余部分
+; C语言写法 memcpy(DSKCAC0+512 ,DSKCAC+512 ,cyls * 512*18*2/4 - 512/4)
+		MOV		ESI,DSKCAC0+512	; 传送源
+		MOV		EDI,DSKCAC+512	; 传送目标
 		MOV		ECX,0
 		MOV		CL,BYTE [CYLS]
-		IMUL	ECX,512*18*2/4	; シリンダ数からバイト数/4に変換
-		SUB		ECX,512/4		; IPLの分だけ差し引く
+		IMUL	ECX,512*18*2/4	; 柱面数转换为字节数/4
+		SUB		ECX,512/4		; 减去IPL
 		CALL	memcpy
 
-; asmheadでしなければいけないことは全部し終わったので、
-;	あとはbootsourceに任せる
+; asmhead功能结束
 
-; bootsourceの起動
+; bootsource的启动
 
 		MOV		EBX,BOTPAK
 		MOV		ECX,[EBX+16]
 		ADD		ECX,3			; ECX += 3;
 		SHR		ECX,2			; ECX /= 4;
-		JZ		skip			; 転送するべきものがない
-		MOV		ESI,[EBX+20]	; 転送元
+		JZ		skip			; 没有要传送的东西
+		MOV		ESI,[EBX+20]	; 传送源
 		ADD		ESI,EBX
-		MOV		EDI,[EBX+12]	; 転送先
+		MOV		EDI,[EBX+12]	; 传送目的地
 		CALL	memcpy
 skip:
-		MOV		ESP,[EBX+12]	; スタック初期値
+		MOV		ESP,[EBX+12]	; 栈初始值
 		JMP		DWORD 2*8:0x0000001b
 
 waitkbdout:
 		IN		 AL,0x64
 		AND		 AL,0x02
-		JNZ		waitkbdout		; ANDの結果が0でなければwaitkbdoutへ
+		JNZ		waitkbdout		; 如果相加结果不是0就跳转waitkbdout
 		RET
 
 memcpy:
@@ -125,15 +180,14 @@ memcpy:
 		MOV		[EDI],EAX
 		ADD		EDI,4
 		SUB		ECX,1
-		JNZ		memcpy			; 引き算した結果が0でなければmemcpyへ
+		JNZ		memcpy			; 如果相减结果不是0就跳转memcpy
 		RET
-; memcpyはアドレスサイズプリフィクスを入れ忘れなければ、ストリング命令でも書ける
 
 		ALIGNB	16
 GDT0:
-		RESB	8				; ヌルセレクタ
-		DW		0xffff,0x0000,0x9200,0x00cf	; 読み書き可能セグメント32bit
-		DW		0xffff,0x0000,0x9a28,0x0047	; 実行可能セグメント32bit（bootsource用）
+		RESB	8				; NULL selector
+		DW		0xffff,0x0000,0x9200,0x00cf	; 可以读写的段 32bit
+		DW		0xffff,0x0000,0x9a28,0x0047	; 可以执行的段 32bit （bootsource）
 
 		DW		0
 GDTR0:

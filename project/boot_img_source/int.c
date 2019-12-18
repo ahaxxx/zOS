@@ -3,6 +3,7 @@
 #define PORT_KEYDAT		0x0060
 
 struct FIFO keyfifo;
+struct FIFO mousefifo;
 
 void init_pic(void){
 	io_out8(PIC0_IMR,  0xff  ); 
@@ -35,12 +36,13 @@ void inthandler21(int *esp){
 }
 
 void inthandler2c(int *esp){
-	struct Bootinfo *binfo = (struct Bootinfo *) ADR_BOOTINFO;
-	boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 0, 32 * 8 - 1, 15);
-	putfonts(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, "INT 2C (IRQ-12) : PS/2 mouse");
-	for (;;) {
-		io_hlt();
-	}
+	// 鼠标中断 
+	unsigned char data;
+	io_out8(PIC1_OCW2, 0x64);	/* IRQ-12受理完成*/
+	io_out8(PIC0_OCW2, 0x62);	/* IRQ-02受理完成 */
+	data = io_in8(PORT_KEYDAT);
+	fifo_put(&mousefifo, data);
+	return;
 }
 
 void inthandler27(int *esp){
